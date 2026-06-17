@@ -2373,7 +2373,11 @@ function renderProgress() {
   let weekDone = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(mon); d.setDate(mon.getDate() + i);
-    if (getSchedule()[d.getDay()].badge !== 'rest' && ls('done_' + fmtDate(d), false)) weekDone++;
+    const dateStr = fmtDate(d);
+    const hasWorkout = ls('done_' + dateStr, false);
+    const hxSessions = ls('hx_sessions_' + dateStr, []);
+    const hasHyroxSession = hxSessions.length > 0;
+    if (getSchedule()[d.getDay()].badge !== 'rest' && (hasWorkout || hasHyroxSession)) weekDone++;
   }
   document.getElementById('statWeekly').textContent = weekDone + '/6';
 
@@ -3831,8 +3835,9 @@ pullFromSupabase().then(function() {
   initDiet();
   initWorkout();
   renderMeditation();
+  renderProgress(); renderHeatmap(); // Always render progress data
   if (document.getElementById('tab-progress')?.classList.contains('active')) {
-    renderProgress(); renderHeatmap();
+    // Already rendered above
   }
 });
 </script>
