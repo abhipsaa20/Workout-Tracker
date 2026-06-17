@@ -1888,13 +1888,13 @@ function renderWeekStrip() {
     const dk = fmtDate(d);
     const dow = d.getDay();
     const schedule = getSchedule()[dow];
-    const done = ls('done_' + dk, false);
-    const hasHxSession = ls('hx_sessions_' + dk, []).length > 0;
+    const done = hasAnyWorkout(dk);
+    const isHyroxActivity = !ls('done_' + dk, false) && done;
     const isToday = dk === today();
     const isCurrent = dk === currentWorkoutDate;
     const div = document.createElement('div');
     let cls = 'week-day';
-    if (done || hasHxSession) cls += (schedule.badge === 'cardio') ? ' cardio-day' : (schedule.badge === 'hyrox' || hasHxSession) ? ' hyrox-day' : ' done';
+    if (done) cls += (schedule.badge === 'cardio') ? ' cardio-day' : (schedule.badge === 'hyrox' || isHyroxActivity) ? ' hyrox-day' : ' done';
     else if (schedule.badge === 'rest') cls += ' rest-day';
     if (isToday || isCurrent) cls += ' today';
     div.className = cls;
@@ -2325,10 +2325,7 @@ function updateStreak() {
     const dk = fmtDate(d);
     const dow = d.getDay();
     if (getSchedule()[dow].badge === 'rest') { d.setDate(d.getDate() - 1); continue; }
-    const hasWorkout = ls('done_' + dk, false);
-    const hxSessions = ls('hx_sessions_' + dk, []);
-    const hasHyroxSession = hxSessions.length > 0;
-    if (hasWorkout || hasHyroxSession) { streak++; d.setDate(d.getDate() - 1); }
+    if (hasAnyWorkout(dk)) { streak++; d.setDate(d.getDate() - 1); }
     else break;
   }
   return streak;
@@ -2375,10 +2372,7 @@ function renderProgress() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(mon); d.setDate(mon.getDate() + i);
     const dateStr = fmtDate(d);
-    const hasWorkout = ls('done_' + dateStr, false);
-    const hxSessions = ls('hx_sessions_' + dateStr, []);
-    const hasHyroxSession = hxSessions.length > 0;
-    if (getSchedule()[d.getDay()].badge !== 'rest' && (hasWorkout || hasHyroxSession)) weekDone++;
+    if (getSchedule()[d.getDay()].badge !== 'rest' && hasAnyWorkout(dateStr)) weekDone++;
   }
   document.getElementById('statWeekly').textContent = weekDone + '/6';
 
@@ -2469,6 +2463,24 @@ function renderWorkoutSummary() {
     total++;
     hyrox++;
   }
+  // Also count hyrox_gym_ sessions with activity
+  const gymPrefix = ACTIVE_USER + ':hyrox_gym_';
+  for (let i = 0; i < localStorage.length; i++) {
+    const rawKey = localStorage.key(i);
+    if (!rawKey || !rawKey.startsWith(gymPrefix)) continue;
+    try {
+      const arr = JSON.parse(localStorage.getItem(rawKey));
+      if (!arr || !arr.length) continue;
+      for (var j = 0; j < arr.length; j++) {
+        var ds = arr[j].date;
+        if (!ds || ds < startDate || counted[ds]) continue;
+        var hasActivity = false;
+        if (arr[j].completed) hasActivity = true;
+        else if (arr[j].stations) { for (var sk in arr[j].stations) { if (arr[j].stations[sk] && arr[j].stations[sk].done) { hasActivity = true; break; } } }
+        if (hasActivity) { counted[ds] = true; total++; hyrox++; }
+      }
+    } catch(e) { continue; }
+  }
   const totalEl = document.getElementById('totalWorkoutDays');
   const cardioEl = document.getElementById('totalCardioDays');
   const strEl = document.getElementById('totalStrengthDays');
@@ -2519,35 +2531,29 @@ function renderHeatmap() {
     const dk = fmtDate(date);
     const dow = date.getDay();
     const s = getSchedule()[dow];
-    const done = ls('done_' + dk, false);
+    const doneFlag = ls('done_' + dk, false);
+    const anyWorkout = hasAnyWorkout(dk);
+    const isHyroxActivity = anyWorkout && !doneFlag;
     const isToday = dk === todayStr;
-    const isPast = dk < todayStr;  // strictly before today — today is never missed
+    const isPast = dk < todayStr;
     let cls = 'hm-day';
     const isAfterStart = dk >= (USERS[ACTIVE_USER]?.startDate || '2026-06-17');
     const isFuture = dk > todayStr;
-    // Also check if this date has a saved MMA gym session
-    const gymSessions = ls('hx_sessions_' + dk, []);
-    const hasGymSession = gymSessions.some(function(g){ return g.type === 'gym'; });
 
-    if (isAfterStart && (done || hasGymSession)) {
-      if (hasGymSession && !done) {
-        // MMA gym day — show as hyrox
-        cls += ' hm-hyrox'; hyroxCnt++;
-      } else if (s.badge === 'hyrox') { cls += ' hm-hyrox'; hyroxCnt++; }
+    if (isAfterStart && anyWorkout) {
+      if (isHyroxActivity || s.badge === 'hyrox') { cls += ' hm-hyrox'; hyroxCnt++; }
       else if (s.badge === 'cardio') { cls += ' hm-cardio'; cardioCnt++; }
       else if (s.badge !== 'rest') { cls += ' hm-done'; doneCnt++; }
     } else if (!isAfterStart && (isPast || isToday)) {
-      cls += ' hm-before-start'; // before start date — greyed out
-    } else if (isPast && isAfterStart && !done && !hasGymSession) {
-      // Past days after start that weren't done
+      cls += ' hm-before-start';
+    } else if (isPast && isAfterStart && !anyWorkout) {
       if (s.badge === 'rest') { cls += ' hm-rest'; restCnt++; }
       else { cls += ' hm-missed'; missedCnt++; }
     }
-    // Future undone days stay neutral grey — no class added
     const div = document.createElement('div');
     div.className = cls;
     if (isToday) div.style.border = '2px solid var(--green)';
-    div.title = new Date(year, month, d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) + (done || hasGymSession ? ' ✓' : (isPast && isAfterStart && s.badge !== 'rest') ? ' ✗' : '');
+    div.title = new Date(year, month, d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) + (anyWorkout ? ' ✓' : (isPast && isAfterStart && s.badge !== 'rest') ? ' ✗' : '');
     el.appendChild(div);
   }
 
@@ -3155,6 +3161,31 @@ function getWeekKey() {
   return fmtDate(mon);
 }
 
+function getWeekKeyForDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return fmtDate(mon);
+}
+
+function hasGymWorkoutOnDate(dateStr) {
+  const wk = getWeekKeyForDate(dateStr);
+  const sessions = ls('hyrox_gym_' + wk, []);
+  for (var i = 0; i < sessions.length; i++) {
+    if (sessions[i].date !== dateStr) continue;
+    if (sessions[i].completed) return true;
+    var st = sessions[i].stations;
+    if (st) { for (var k in st) { if (st[k] && st[k].done) return true; } }
+  }
+  return false;
+}
+
+function hasAnyWorkout(dateStr) {
+  if (ls('done_' + dateStr, false)) return true;
+  if (ls('hx_sessions_' + dateStr, []).length > 0) return true;
+  return hasGymWorkoutOnDate(dateStr);
+}
+
 function renderHyrox() {
   renderHxCalendar();
   const wk = getWeekKey();
@@ -3529,6 +3560,7 @@ function toggleGymStation(sessionIdx, stKey, wk) {
   sessions[sessionIdx].stations[stKey] = cur;
   lsSave('hyrox_gym_' + wk, sessions);
   renderGymSessions(wk);
+  renderWeekStrip();
   // Keep card open after toggle
   setTimeout(function(){ toggleGymCard(sessionIdx, wk); }, 10);
 }
