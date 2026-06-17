@@ -1889,11 +1889,12 @@ function renderWeekStrip() {
     const dow = d.getDay();
     const schedule = getSchedule()[dow];
     const done = ls('done_' + dk, false);
+    const hasHxSession = ls('hx_sessions_' + dk, []).length > 0;
     const isToday = dk === today();
     const isCurrent = dk === currentWorkoutDate;
     const div = document.createElement('div');
     let cls = 'week-day';
-    if (done) cls += (schedule.badge === 'cardio') ? ' cardio-day' : (schedule.badge === 'hyrox') ? ' hyrox-day' : ' done';
+    if (done || hasHxSession) cls += (schedule.badge === 'cardio') ? ' cardio-day' : (schedule.badge === 'hyrox' || hasHxSession) ? ' hyrox-day' : ' done';
     else if (schedule.badge === 'rest') cls += ' rest-day';
     if (isToday || isCurrent) cls += ' today';
     div.className = cls;
@@ -2435,8 +2436,8 @@ function renderCardioSessions() {
 function renderWorkoutSummary() {
   let total = 0, cardio = 0, strength = 0, hyrox = 0;
   const startDate = USERS[ACTIVE_USER]?.startDate || '2026-06-17';
+  const counted = {};
   const prefix = ACTIVE_USER + ':done_';
-  // Directly scan localStorage for this user's done_ keys
   for (let i = 0; i < localStorage.length; i++) {
     const rawKey = localStorage.key(i);
     if (!rawKey || !rawKey.startsWith(prefix)) continue;
@@ -2446,11 +2447,27 @@ function renderWorkoutSummary() {
     } catch(e) { continue; }
     const dateStr = rawKey.slice(prefix.length);
     if (dateStr < startDate) continue;
+    counted[dateStr] = true;
     const dow = new Date(dateStr + 'T00:00:00').getDay();
     const badge = (getSchedule()[dow] || {}).badge;
     total++;
     if (badge === 'cardio') cardio++;
+    else if (badge === 'hyrox') hyrox++;
     else if (badge && badge !== 'rest') strength++;
+  }
+  const hxPrefix = ACTIVE_USER + ':hx_sessions_';
+  for (let i = 0; i < localStorage.length; i++) {
+    const rawKey = localStorage.key(i);
+    if (!rawKey || !rawKey.startsWith(hxPrefix)) continue;
+    const dateStr = rawKey.slice(hxPrefix.length);
+    if (dateStr < startDate || counted[dateStr]) continue;
+    try {
+      const arr = JSON.parse(localStorage.getItem(rawKey));
+      if (!arr || !arr.length) continue;
+    } catch(e) { continue; }
+    counted[dateStr] = true;
+    total++;
+    hyrox++;
   }
   const totalEl = document.getElementById('totalWorkoutDays');
   const cardioEl = document.getElementById('totalCardioDays');
@@ -2521,7 +2538,7 @@ function renderHeatmap() {
       else if (s.badge !== 'rest') { cls += ' hm-done'; doneCnt++; }
     } else if (!isAfterStart && (isPast || isToday)) {
       cls += ' hm-before-start'; // before start date — greyed out
-    } else if (isPast && isAfterStart && !done) {
+    } else if (isPast && isAfterStart && !done && !hasGymSession) {
       // Past days after start that weren't done
       if (s.badge === 'rest') { cls += ' hm-rest'; restCnt++; }
       else { cls += ' hm-missed'; missedCnt++; }
@@ -3569,8 +3586,10 @@ function saveGymSessionComplete(idx, wk) {
     btn.disabled = true;
   }
 
-  // Refresh calendar if visible
+  // Refresh calendar and progress stats
   renderHxCalendar();
+  renderWeekStrip();
+  renderProgress();
 
   // Show toast
   showToast('Gym session saved to calendar!', 'success');
