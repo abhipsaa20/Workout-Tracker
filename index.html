@@ -2321,6 +2321,12 @@ function logWeight() {
 function updateStreak() {
   let streak = 0;
   const d = new Date();
+  // If today is not a rest day and has no workout yet, skip it —
+  // don't break the streak just because today isn't done yet
+  const todayDow = d.getDay();
+  if (getSchedule()[todayDow].badge !== 'rest' && !hasAnyWorkout(fmtDate(d))) {
+    d.setDate(d.getDate() - 1);
+  }
   while (true) {
     const dk = fmtDate(d);
     const dow = d.getDay();
@@ -2429,7 +2435,6 @@ function renderCardioSessions() {
 
 function renderWorkoutSummary() {
   let total = 0, cardio = 0, strength = 0, hyrox = 0;
-  const startDate = USERS[ACTIVE_USER]?.startDate || '2026-06-17';
   const counted = {};
   const prefix = ACTIVE_USER + ':done_';
   for (let i = 0; i < localStorage.length; i++) {
@@ -2440,7 +2445,6 @@ function renderWorkoutSummary() {
       if (!val) continue;
     } catch(e) { continue; }
     const dateStr = rawKey.slice(prefix.length);
-    if (dateStr < startDate) continue;
     counted[dateStr] = true;
     const dow = new Date(dateStr + 'T00:00:00').getDay();
     const badge = (getSchedule()[dow] || {}).badge;
@@ -2454,7 +2458,7 @@ function renderWorkoutSummary() {
     const rawKey = localStorage.key(i);
     if (!rawKey || !rawKey.startsWith(hxPrefix)) continue;
     const dateStr = rawKey.slice(hxPrefix.length);
-    if (dateStr < startDate || counted[dateStr]) continue;
+    if (counted[dateStr]) continue;
     try {
       const arr = JSON.parse(localStorage.getItem(rawKey));
       if (!arr || !arr.length) continue;
@@ -2473,7 +2477,7 @@ function renderWorkoutSummary() {
       if (!arr || !arr.length) continue;
       for (var j = 0; j < arr.length; j++) {
         var ds = arr[j].date;
-        if (!ds || ds < startDate || counted[ds]) continue;
+        if (!ds || counted[ds]) continue;
         var hasActivity = false;
         if (arr[j].completed) hasActivity = true;
         else if (arr[j].stations) { for (var sk in arr[j].stations) { if (arr[j].stations[sk] && arr[j].stations[sk].done) { hasActivity = true; break; } } }
@@ -2540,7 +2544,7 @@ function renderHeatmap() {
     const isAfterStart = dk >= (USERS[ACTIVE_USER]?.startDate || '2026-06-17');
     const isFuture = dk > todayStr;
 
-    if (isAfterStart && anyWorkout) {
+    if (anyWorkout) {
       if (isHyroxActivity || s.badge === 'hyrox') { cls += ' hm-hyrox'; hyroxCnt++; }
       else if (s.badge === 'cardio') { cls += ' hm-cardio'; cardioCnt++; }
       else if (s.badge !== 'rest') { cls += ' hm-done'; doneCnt++; }
