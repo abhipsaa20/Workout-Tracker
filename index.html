@@ -191,6 +191,8 @@
   .hx-cal-day.today-hx { border-color: var(--hyrox); background: var(--hyrox-light); }
   .hx-cal-day.has-session { background: #FFF0E8; border-color: #FDBA74; }
   .hx-cal-day.has-run { background: #F3F4F6; border-color: #D1D5DB; }
+  .hx-cal-day.has-self { background: #E1F5EE; border-color: #6EE7B7; }
+  .hx-day-tag.self { background: #D1FAE5; color: #065F46; }
   .hx-cal-day.has-both { background: linear-gradient(135deg, #FFF0E8 50%, #E1F5EE 50%); border-color: var(--hyrox); }
   .hx-day-num { font-size: 11px; font-weight: 600; color: var(--muted); }
   .hx-day-tag { font-size: 9px; margin-top: 2px; padding: 1px 4px; border-radius: 3px; display: inline-block; line-height: 1.4; }
@@ -2623,8 +2625,8 @@ function renderHxCalendar() {
     if (dk === todayStr) cls += ' today-hx';
     else if ((hasRun || hasWorkout) && hasGym) cls += ' has-both';
     else if (hasGym) cls += ' has-session';
+    else if (hasWorkout) cls += ' has-self';
     else if (hasRun) cls += ' has-run';
-    else if (hasWorkout) cls += ' has-run'; // Workout day shown as run-style
     div.className = cls;
     div.onclick = (function(dateKey){ return function(){ openHxModal(dateKey); }; })(dk);
 
@@ -2634,7 +2636,7 @@ function renderHxCalendar() {
     if (hasWorkout) {
       const plan = getHyroxDayPlan(dk, dow);
       const label = plan ? plan.title.replace('🏆 ', '').substring(0, 12) : (dow === 3 ? 'Hyrox' : 'Hyrox/Run');
-      inner += '<div class="hx-day-tag run">' + label + '</div>';
+      inner += '<div class="hx-day-tag self">' + label + '</div>';
       if (workoutLog && workoutLog.runKm) {
         inner += '<div style="font-size:9px;color:#065F46;margin-top:1px">' + workoutLog.runKm + 'km</div>';
       }
