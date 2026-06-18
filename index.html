@@ -2645,12 +2645,6 @@ function renderHxCalendar() {
       const times = hxSessions.filter(function(s){ return s.type === 'run' && s.time; }).map(function(s){ return s.time; });
       if (times.length) inner += '<div style="font-size:9px;color:#065F46;margin-top:1px">' + times[0] + '</div>';
     }
-    // Show weekly checklist run
-    if (hasWeeklyRun && !hasManualRun && !hasWorkout) {
-      const runInfo = runData[runDayMap[dow]];
-      inner += '<div class="hx-day-tag run">5km</div>';
-      if (runInfo.time) inner += '<div style="font-size:9px;color:#065F46;margin-top:1px">' + runInfo.time + '</div>';
-    }
     // Show gym
     if (hasGym) {
       const gymSess = hxSessions.filter(function(s){ return s.type === 'gym'; });
