@@ -736,26 +736,10 @@
   </div>
 
   <div class="card">
-    <div class="card-title">5 km runs this week</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Week of <span id="hyroxWeekLabel"></span></div>
-    <div class="run-week-card" id="runChecklist"></div>
-    <div class="week-progress">
-      <div class="week-prog-label">Weekly runs</div>
-      <div class="week-prog-count" id="runWeekCount">0/3</div>
-    </div>
-    <div class="progress-bar-bg"><div class="progress-bar-fill" id="runWeekBar" style="width:0%"></div></div>
-  </div>
-
-  <div class="card">
     <div class="card-title">MMA Gym — Hyrox training sessions</div>
     <div id="gymSessions"></div>
     <button class="btn-add" onclick="addGymSession()">+ Add gym session</button>
-  </div>
-
-  <div class="card">
-    <div class="card-title">5 km run pace history</div>
-    <div class="chart-wrap"><canvas id="runChart"></canvas></div>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px">Total Hyrox gym sessions: <strong id="totalGymSessions">0</strong></p>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Total Hyrox sessions: <strong id="totalGymSessions">0</strong></p>
   </div>
 
   <div class="card">
@@ -770,7 +754,7 @@
     <!-- Legend -->
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--muted)">
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#D1FAE5;vertical-align:middle;margin-right:4px"></span>5km run</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#FEE2CC;vertical-align:middle;margin-right:4px"></span>Gym session</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#FEE2CC;vertical-align:middle;margin-right:4px"></span>Hyrox session</span>
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,#FFF0E8 50%,#E1F5EE 50%);border:1px solid #FDBA74;vertical-align:middle;margin-right:4px"></span>Both</span>
     </div>
     <!-- Day headers -->
@@ -796,7 +780,7 @@
       <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Session type</div>
       <div class="hx-session-type">
         <div class="hx-type-btn run-type" id="hxTypeRun" onclick="selectHxType('run')">🏃 5km Run</div>
-        <div class="hx-type-btn gym-type" id="hxTypeGym" onclick="selectHxType('gym')">🏋️ Gym Session</div>
+        <div class="hx-type-btn gym-type" id="hxTypeGym" onclick="selectHxType('gym')">🏋️ Hyrox Session</div>
       </div>
 
       <!-- Run fields -->
@@ -1200,12 +1184,6 @@ const TREAD_PHASES = [
   { label: 'Recovery jog', speed: 3, dur: 60, type: 'slow' },
   { label: 'Run', speed: 7, dur: 120, type: 'fast' },
   { label: 'Cool-down walk', speed: 3, dur: 90, type: 'slow' }
-];
-
-const RUN_DAYS = [
-  { key: 'mon', label: 'Monday', dow: 1 },
-  { key: 'wed', label: 'Wednesday', dow: 3 },
-  { key: 'fri', label: 'Friday', dow: 5 }
 ];
 
 // ── User profiles ────────────────────────────────────────────────────────────
@@ -2306,7 +2284,7 @@ function renderDiet() {
 }
 
 // ===================== PROGRESS =====================
-let weightChart = null, runChart = null;
+let weightChart = null;
 
 function logWeight() {
   const w = parseFloat(document.getElementById('weightInput').value);
@@ -2632,15 +2610,7 @@ function renderHxCalendar() {
     const workoutLog = ls('tread_log_' + dk, null);
     const hasWorkoutSession = isHyroxDay && workoutDone;
 
-    // Hyrox weekly run checklist (from Hyrox tab run checklist)
-    const weekStart = new Date(dk + 'T00:00:00');
-    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-    const wkKey = fmtDate(weekStart);
-    const runDayMap = { 1: 'mon', 3: 'wed', 5: 'fri' };
-    const runData = ls('hyrox_runs_' + wkKey, {});
-    const hasWeeklyRun = runDayMap[dow] && runData[runDayMap[dow]] && runData[runDayMap[dow]].done;
-
-    const hasRun = hasManualRun || hasWeeklyRun;
+    const hasRun = hasManualRun;
     const hasGym = hasManualGym;
     const hasWorkout = hasWorkoutSession;
 
@@ -2685,7 +2655,7 @@ function renderHxCalendar() {
     if (hasGym) {
       const gymSess = hxSessions.filter(function(s){ return s.type === 'gym'; });
       const actStr = gymSess.flatMap(function(s){ return s.activities || []; }).slice(0,2).join(', ');
-      inner += '<div class="hx-day-tag gym">🏋️ ' + (actStr || 'Gym') + '</div>';
+      inner += '<div class="hx-day-tag gym">🏋️ ' + (actStr || 'Hyrox') + '</div>';
     }
 
     div.innerHTML = inner;
@@ -2696,7 +2666,7 @@ function renderHxCalendar() {
     
     statsEl.innerHTML = [
       { val: workoutCount, label: 'Hyrox sessions', bg: '#D1FAE5', col: '#065F46' },
-      { val: gymCount,      label: 'MMA gym sessions', bg: '#FEE2CC', col: '#92400E' },
+      { val: gymCount,      label: 'Hyrox sessions', bg: '#FEE2CC', col: '#92400E' },
       { val: runCount,      label: 'Run sessions', bg: '#F3F4F6', col: '#374151' },
     ].map(function(s) {
       return '<div style="flex:1;text-align:center;background:' + s.bg + ';border-radius:8px;padding:8px 4px">' +
@@ -2731,7 +2701,6 @@ function closeHxModal(e) {
   document.getElementById('hxModal').style.display = 'none';
   document.body.style.overflow = '';
   renderHxCalendar();
-  renderRunChart();
 }
 
 function selectHxType(type) {
@@ -2777,20 +2746,6 @@ function saveHxSession() {
   }
   sessions.push(session);
   lsSave('hx_sessions_' + hxModalDate, sessions);
-  // also update hyrox weekly run data for checklist sync
-  if (hxSessionType === 'run') {
-    const d = new Date(hxModalDate + 'T00:00:00');
-    const wkKey = getWeekKey();
-    const dow = d.getDay();
-    const runDayMap = { 2: 'tue', 4: 'thu', 6: 'sat' };
-    if (runDayMap[dow]) {
-      const runData = ls('hyrox_runs_' + wkKey, {});
-      runData[runDayMap[dow]] = runData[runDayMap[dow]] || {};
-      runData[runDayMap[dow]].done = true;
-      if (session.time) runData[runDayMap[dow]].time = session.time;
-      lsSave('hyrox_runs_' + wkKey, runData);
-    }
-  }
   document.getElementById('hxRunTime').value = '';
   document.getElementById('hxGymDur').value = '';
   document.getElementById('hxSessionNotes').value = '';
@@ -2820,7 +2775,7 @@ function renderHxSavedSessions(dk) {
         ? `${s.distance || '5km'} · ${s.time || 'time not logged'}`
         : `${(s.activities || []).join(', ') || 'Gym'} · ${s.duration ? s.duration + ' min' : ''}`;
       return `<div class="hx-saved-item type-${s.type}">
-        <div style="font-weight:600;font-size:13px">${icon} ${s.type === 'run' ? '5km Run' : 'Gym Session'}</div>
+        <div style="font-weight:600;font-size:13px">${icon} ${s.type === 'run' ? '5km Run' : 'Hyrox Session'}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">${detail}</div>
         ${s.notes ? `<div style="font-size:12px;color:var(--text);margin-top:4px;font-style:italic">"${s.notes}"</div>` : ''}
         <button class="hx-del-btn" onclick="deleteHxSession('${dk}', ${s.id})">×</button>
@@ -3193,57 +3148,10 @@ function hasAnyWorkout(dateStr) {
 function renderHyrox() {
   renderHxCalendar();
   const wk = getWeekKey();
-  const mon = new Date(wk + 'T00:00:00');
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  document.getElementById('hyroxWeekLabel').textContent = `${mon.toLocaleDateString('en-IN', {day:'numeric',month:'short'})} – ${sun.toLocaleDateString('en-IN', {day:'numeric',month:'short'})}`;
-  renderRunChecklist(wk);
   renderGymSessions(wk);
-  renderRunChart();
 }
 
-function renderRunChecklist(wk) {
-  const el = document.getElementById('runChecklist');
-  const runData = ls('hyrox_runs_' + wk, {});
-  let done = 0;
-  el.innerHTML = RUN_DAYS.map(rd => {
-    const r = runData[rd.key] || {};
-    if (r.done) done++;
-    return `<div class="run-day-row">
-      <div class="run-day-label">${rd.label}</div>
-      <div class="run-check${r.done ? ' checked' : ''}" id="runchk_${rd.key}" onclick="toggleRun('${rd.key}','${wk}')">
-        ${r.done ? '✓' : ''}
-      </div>
-      <input class="run-time-input" type="text" placeholder="Time (mm:ss)" value="${r.time||''}" id="runtime_${rd.key}" onchange="saveRunTime('${rd.key}','${wk}')">
-      <button class="run-save-btn" onclick="saveRunTime('${rd.key}','${wk}')">Save</button>
-    </div>`;
-  }).join('');
-  const pct = Math.round(done / 3 * 100);
-  const countEl = document.getElementById('runWeekCount');
-  countEl.textContent = done + '/3';
-  countEl.className = 'week-prog-count ' + (done === 3 ? 'full' : done > 0 ? 'partial' : 'none');
-  document.getElementById('runWeekBar').style.width = pct + '%';
-}
 
-function toggleRun(dayKey, wk) {
-  const runDowMap = { tue: 2, thu: 4, sat: 6 };
-  const mon = new Date(wk + 'T00:00:00');
-  const runDate = new Date(mon); runDate.setDate(mon.getDate() + (runDowMap[dayKey] - 1));
-  if (warnFuture(fmtDate(runDate))) return;
-  const runData = ls('hyrox_runs_' + wk, {});
-  runData[dayKey] = runData[dayKey] || {};
-  runData[dayKey].done = !runData[dayKey].done;
-  lsSave('hyrox_runs_' + wk, runData);
-  renderRunChecklist(wk);
-  renderRunChart();
-}
-
-function saveRunTime(dayKey, wk) {
-  const runData = ls('hyrox_runs_' + wk, {});
-  runData[dayKey] = runData[dayKey] || {};
-  runData[dayKey].time = document.getElementById('runtime_' + dayKey)?.value || '';
-  lsSave('hyrox_runs_' + wk, runData);
-  renderRunChart();
-}
 
 const GYM_STATIONS = [
   // type: 'dist_sets' = sets + distance per set (SkiErg, Rowing, Burpee)
@@ -3628,7 +3536,7 @@ function saveGymSessionComplete(idx, wk) {
   renderProgress();
 
   // Show toast
-  showToast('Gym session saved to calendar!', 'success');
+  showToast('Hyrox session saved to calendar!', 'success');
 }
 
 function addGymSession() {
@@ -3652,72 +3560,6 @@ function deleteGymSession(idx, wk) {
   renderGymSessions(wk);
 }
 
-function renderRunChart() {
-  const points = [];
-  // Pull from hx_sessions (calendar entries)
-  userKeys().forEach(function(k) {
-    if (k.startsWith('hx_sessions_')) {
-      const dk = k.replace('hx_sessions_', '');
-      const sessions = lsRaw(k, []);
-      sessions.forEach(s => {
-        if (s.type === 'run' && s.time) {
-          const parts = s.time.split(':');
-          if (parts.length === 2) {
-            const mins = parseInt(parts[0]) + parseInt(parts[1]) / 60;
-            if (!isNaN(mins)) points.push({ date: dk, time: mins });
-          }
-        }
-      });
-    }
-  });
-  // Also check hyrox_runs_ weekly data
-  userKeys().forEach(function(k) {
-    if (k.startsWith('hyrox_runs_')) {
-      const wk = k.replace('hyrox_runs_', '');
-      const data = lsRaw(k, {});
-      RUN_DAYS.forEach(rd => {
-        const r = data[rd.key];
-        if (r && r.done && r.time) {
-          const parts = r.time.split(':');
-          if (parts.length === 2) {
-            const mins = parseInt(parts[0]) + parseInt(parts[1]) / 60;
-            const d = new Date(wk + 'T00:00:00');
-            d.setDate(d.getDate() + (rd.dow - 1));
-            points.push({ date: fmtDate(d), time: mins });
-          }
-        }
-      });
-    }
-  });
-  points.sort((a, b) => a.date.localeCompare(b.date));
-  const ctx = document.getElementById('runChart').getContext('2d');
-  if (runChart) runChart.destroy();
-  if (!points.length) {
-    ctx.fillStyle = '#9CA3AF';
-    ctx.font = '13px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Log your 5 km times to see pace progress', ctx.canvas.width / 2, 80);
-    return;
-  }
-  runChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: points.map(p => p.date),
-      datasets: [{
-        label: '5 km time (mins)',
-        data: points.map(p => p.time),
-        borderColor: '#E85D04',
-        backgroundColor: 'rgba(232,93,4,0.08)',
-        tension: 0.3, fill: true, pointRadius: 5
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const v = ctx.raw; const m = Math.floor(v); const s = Math.round((v-m)*60); return `${m}:${s<10?'0':''}${s} min`; } } } },
-      scales: { y: { reverse: true, title: { display: true, text: 'Time (lower = faster)', font: { size: 11 } }, grid: { color: '#F3F4F6' } }, x: { ticks: { maxTicksLimit: 6 }, grid: { display: false } } }
-    }
-  });
-}
 
 function toggleCollapsible(header) {
   const body = header.nextElementSibling;
@@ -3854,7 +3696,7 @@ function exportMonthlyExcel() {
     const sessions = ls('hx_sessions_' + dk, []);
     sessions.forEach(function(s) {
       const detail = s.type === 'run' ? (s.distance||'5km') + ' in ' + (s.time||'') : (s.activities||[]).join(', ');
-      hyroxRows.push([dk, s.type==='run'?'5km Run':'Gym Session', detail, s.duration||'', s.notes||'', s.savedAt ? new Date(s.savedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '']);
+      hyroxRows.push([dk, s.type==='run'?'5km Run':'Hyrox Session', detail, s.duration||'', s.notes||'', s.savedAt ? new Date(s.savedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '']);
     });
   }
   const wsHyrox = XLSX.utils.aoa_to_sheet(hyroxRows);
