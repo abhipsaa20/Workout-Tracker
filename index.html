@@ -1264,6 +1264,18 @@ function loadSupaConfig() {
     const cfg = JSON.parse(localStorage.getItem('supabase_config') || 'null');
     if (cfg) { SUPA_URL = cfg.url || ''; SUPA_KEY = cfg.key || ''; }
   } catch(e) {}
+  // Also check URL hash for credentials (for home screen shortcuts)
+  try {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#supa=')) {
+      const decoded = JSON.parse(decodeURIComponent(hash.slice(6)));
+      if (decoded.url && decoded.key) {
+        SUPA_URL = decoded.url;
+        SUPA_KEY = decoded.key;
+        localStorage.setItem('supabase_config', JSON.stringify(decoded));
+      }
+    }
+  } catch(e) {}
 }
 
 function setSyncStatus(msg, color) {
@@ -3708,6 +3720,8 @@ function saveSupabaseConfig() {
   try { localStorage.setItem('supabase_config', JSON.stringify({ url, key })); } catch(e) {}
   SUPA_URL = url;
   SUPA_KEY = key;
+  // Embed credentials in URL hash so home screen shortcuts carry them
+  try { window.history.replaceState(null, '', '#supa=' + encodeURIComponent(JSON.stringify({ url, key }))); } catch(e) {}
   setSyncStatus('Connecting — pulling data from cloud…', 'var(--muted)');
   pullFromSupabase().then(function() {
     initDiet(); initWorkout(); renderMeditation(); initHyrox();
@@ -3727,11 +3741,9 @@ initExport();
 pullFromSupabase().then(function() {
   initDiet();
   initWorkout();
+  initHyrox();
   renderMeditation();
-  renderProgress(); renderHeatmap(); // Always render progress data
-  if (document.getElementById('tab-progress')?.classList.contains('active')) {
-    // Already rendered above
-  }
+  renderProgress(); renderHeatmap();
 });
 </script>
 
