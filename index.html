@@ -1309,7 +1309,8 @@ function pushToSupabase() {
   }, 1500);
 }
 
-// Pull from Supabase on app load and merge into localStorage
+// Pull from Supabase and restore into localStorage
+// Remote data always wins — Supabase is the source of truth
 async function pullFromSupabase() {
   if (!SUPA_URL || !SUPA_KEY) return;
   setSyncStatus('Loading your data…', 'var(--muted)');
@@ -1321,14 +1322,10 @@ async function pullFromSupabase() {
     const rows = await res.json();
     if (rows && rows.length && rows[0].data) {
       const remote = rows[0].data;
-      // Merge: remote wins for keys not in localStorage (fresh device)
-      // Local wins for keys already present (user made changes offline)
       const prefix = ACTIVE_USER + ':';
       Object.keys(remote).forEach(function(k) {
         const fullKey = prefix + k;
-        if (!localStorage.getItem(fullKey)) {
-          try { localStorage.setItem(fullKey, JSON.stringify(remote[k])); } catch(e) {}
-        }
+        try { localStorage.setItem(fullKey, JSON.stringify(remote[k])); } catch(e) {}
       });
       setSyncStatus('✓ Data loaded from cloud', 'var(--green)');
     } else {
@@ -3708,12 +3705,15 @@ function saveSupabaseConfig() {
   const url = (document.getElementById('supabaseUrl') || {}).value.trim();
   const key = (document.getElementById('supabaseKey') || {}).value.trim();
   if (!url || !key) { setSyncStatus('Please enter both URL and key', '#EF4444'); return; }
-  // Save to localStorage without triggering a push (avoid loop)
   try { localStorage.setItem('supabase_config', JSON.stringify({ url, key })); } catch(e) {}
   SUPA_URL = url;
   SUPA_KEY = key;
-  setSyncStatus('✓ Connected — syncing now…', 'var(--green)');
-  pushToSupabase();
+  setSyncStatus('Connecting — pulling data from cloud…', 'var(--muted)');
+  pullFromSupabase().then(function() {
+    initDiet(); initWorkout(); renderMeditation(); initHyrox();
+    renderProgress(); renderHeatmap();
+    pushToSupabase();
+  });
 }
 
 // ===================== INIT =====================
