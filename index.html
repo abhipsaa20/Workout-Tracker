@@ -925,6 +925,25 @@ function warnFuture(dateStr) {
   return false;
 }
 
+function hasAnyWorkout(dateStr) {
+  if (ls('done_' + dateStr, false)) return true;
+
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  const schedule = getSchedule()[dow];
+  if (!schedule || schedule.badge === 'rest') return false;
+
+  if (schedule.badge === 'cardio') {
+    const log = ls('tread_log_' + dateStr, null);
+    if (log && (log.duration || log.runKm || log.notes)) return true;
+    return !!ls('cardio_mode_' + dateStr, null);
+  }
+
+  return (schedule.exercises || []).some(function(ex) {
+    const sets = ls('sets_' + dateStr + '_' + ex, []);
+    return Array.isArray(sets) && sets.length > 0;
+  });
+}
+
 function showToast(msg, type) {
   let toast = document.getElementById('globalToast');
   if (!toast) {
